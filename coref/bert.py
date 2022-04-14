@@ -5,12 +5,12 @@ from typing import List, Tuple
 import numpy as np                                 # type: ignore
 from transformers import AutoModel, AutoTokenizer  # type: ignore
 
-from coref.config import Config
+from coref.config import ModelConfig
 from coref.const import Doc
 
 
 def get_subwords_batches(doc: Doc,
-                         config: Config,
+                         config: ModelConfig,
                          tok: AutoTokenizer
                          ) -> np.ndarray:
     """
@@ -53,7 +53,7 @@ def get_subwords_batches(doc: Doc,
     return np.array(subwords_batches)
 
 
-def load_bert(config: Config) -> Tuple[AutoModel, AutoTokenizer]:
+def load_bert(config: ModelConfig) -> Tuple[AutoModel, AutoTokenizer]:
     """
     Loads bert and bert tokenizer as pytorch modules.
 

@@ -8,15 +8,9 @@ from typing import Dict
 
 
 @dataclass
-class Config:  # pylint: disable=too-many-instance-attributes, too-few-public-methods
+class ModelConfig:  # pylint: disable=too-many-instance-attributes, too-few-public-methods
     """ Contains values needed to set up the coreference model. """
     section: str
-
-    data_dir: str
-
-    train_data: str
-    dev_data: str
-    test_data: str
 
     device: str
 
@@ -42,3 +36,15 @@ class Config:  # pylint: disable=too-many-instance-attributes, too-few-public-me
 
     tokenizer_kwargs: Dict[str, dict]
     conll_log_dir: str
+
+@dataclass
+class DataConfig:  # pylint: disable=too-many-instance-attributes, too-few-public-methods
+    """ Contains values needed to set up the coreference model. """
+    section: str
+
+    data_dir: str
+
+    train_data: str
+    dev_data: str
+    test_data: str
+

@@ -4,14 +4,14 @@ mentions produces their anaphoricity scores.
 import torch
 
 from coref import utils
-from coref.config import Config
+from coref.config import ModelConfig
 
 
 class AnaphoricityScorer(torch.nn.Module):
     """ Calculates anaphoricity scores by passing the inputs into a FFNN """
     def __init__(self,
                  in_features: int,
-                 config: Config):
+                 config: ModelConfig):
         super().__init__()
         hidden_size = config.hidden_size
         if not config.n_hidden_layers:

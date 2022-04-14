@@ -6,7 +6,7 @@ from contextlib import contextmanager
 import os
 from typing import List, TextIO
 
-from coref.config import Config
+from coref.config import DataConfig
 from coref.const import Doc, Span
 
 
@@ -63,7 +63,7 @@ def write_conll(doc: Doc,
 
 
 @contextmanager
-def open_(config: Config, epochs: int, data_split: str):
+def open_(config: DataConfig, epochs: int, data_split: str):
     """ Opens conll log files for writing in a safe way. """
     base_filename = f"{config.section}_{data_split}_e{epochs}"
     conll_dir = config.conll_log_dir

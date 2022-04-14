@@ -5,7 +5,7 @@ from typing import Tuple
 
 import torch
 
-from coref.config import Config
+from coref.config import ModelConfig
 from coref.const import Doc
 
 
@@ -13,7 +13,7 @@ class WordEncoder(torch.nn.Module):  # pylint: disable=too-many-instance-attribu
     """ Receives bert contextual embeddings of a text, extracts all the
     possible mentions in that text. """
 
-    def __init__(self, features: int, config: Config):
+    def __init__(self, features: int, config: ModelConfig):
         """
         Args:
             features (int): the number of featues in the input embeddings

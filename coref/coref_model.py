@@ -17,7 +17,7 @@ import transformers     # type: ignore
 from coref import bert, conll, utils
 from coref.anaphoricity_scorer import AnaphoricityScorer
 from coref.cluster_checker import ClusterChecker
-from coref.config import Config
+from coref.config import ModelConfig, DataConfig
 from coref.const import CorefResult, Doc
 from coref.loss import CorefLoss
 from coref.pairwise_encoder import PairwiseEncoder
@@ -49,7 +49,8 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
         sp (SpanPredictor)
     """
     def __init__(self,
-                 config_path: str,
+                 data_config_path: str,
+                 model_config_path: str,
                  section: str,
                  epochs_trained: int = 0):
         """
@@ -61,13 +62,15 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
             epochs_trained (int): the number of epochs finished
                 (useful for warm start)
         """
-        self.config = CorefModel._load_config(config_path, section)
+        self.data_config, self.model_config = CorefModel._load_configs(
+            data_config_path, model_config_path, section)
+
         self.epochs_trained = epochs_trained
         self._docs: Dict[str, List[Doc]] = {}
         self._build_model()
         self._build_optimizers()
         self._set_training(False)
-        self._coref_criterion = CorefLoss(self.config.bce_loss_weight)
+        self._coref_criterion = CorefLoss(self.model_config.bce_loss_weight)
         self._span_criterion = torch.nn.CrossEntropyLoss(reduction="sum")
 
     @property
@@ -101,12 +104,12 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
         self.training = False
         w_checker = ClusterChecker()
         s_checker = ClusterChecker()
-        docs = self._get_docs(self.config.__dict__[f"{data_split}_data"])
+        docs = self._get_docs(self.data_config.__dict__[f"{data_split}_data"])
         running_loss = 0.0
         s_correct = 0
         s_total = 0
 
-        with conll.open_(self.config, self.epochs_trained, data_split) \
+        with conll.open_(self.data_config, self.epochs_trained, data_split) \
                 as (gold_f, pred_f):
             pbar = tqdm(docs, unit="docs", ncols=0)
             for doc in pbar:
@@ -170,9 +173,9 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
         Assumes files are named like {configuration}_(e{epoch}_{time})*.pt.
         """
         if path is None:
-            pattern = rf"{self.config.section}_\(e(\d+)_[^()]*\).*\.pt"
+            pattern = rf"{self.data_config.section}_\(e(\d+)_[^()]*\).*\.pt"
             files = []
-            for f in os.listdir(self.config.data_dir):
+            for f in os.listdir(self.data_config.data_dir):
                 match_obj = re.match(pattern, f)
                 if match_obj:
                     files.append((int(match_obj.group(1)), f))
@@ -180,12 +183,12 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
                 if noexception:
                     print("No weights have been loaded", flush=True)
                     return
-                raise OSError(f"No weights found in {self.config.data_dir}!")
+                raise OSError(f"No weights found in {self.data_config.data_dir}!")
             _, path = sorted(files)[-1]
-            path = os.path.join(self.config.data_dir, path)
+            path = os.path.join(self.data_config.data_dir, path)
 
         if map_location is None:
-            map_location = self.config.device
+            map_location = self.model_config.device
         print(f"Loading from {path}...")
         state_dicts = torch.load(path, map_location=map_location)
         self.epochs_trained = state_dicts.pop("epochs_trained", 0)
@@ -225,7 +228,7 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
         # Get pairwise features [n_words, n_ants, n_pw_features]
         pw = self.pw(top_indices, doc)
 
-        batch_size = self.config.a_scoring_batch_size
+        batch_size = self.model_config.a_scoring_batch_size
         a_scores_lst: List[torch.Tensor] = []
 
         for i in range(0, len(words), batch_size):
@@ -262,13 +265,13 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
         """ Saves trainable models as state dicts. """
         to_save: List[Tuple[str, Any]] = \
             [(key, value) for key, value in self.trainable.items()
-             if self.config.bert_finetune or key != "bert"]
+             if self.model_config.bert_finetune or key != "bert"]
         to_save.extend(self.optimizers.items())
         to_save.extend(self.schedulers.items())
 
         time = datetime.strftime(datetime.now(), "%Y.%m.%d_%H.%M")
-        path = os.path.join(self.config.data_dir,
-                            f"{self.config.section}"
+        path = os.path.join(self.data_config.data_dir,
+                            f"{self.model_config.section}"
                             f"_(e{self.epochs_trained}_{time}).pt")
         savedict = {name: module.state_dict() for name, module in to_save}
         savedict["epochs_trained"] = self.epochs_trained  # type: ignore
@@ -278,11 +281,11 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
         """
         Trains all the trainable blocks in the model using the config provided.
         """
-        docs = list(self._get_docs(self.config.train_data))
+        docs = list(self._get_docs(self.data_config.train_data))
         docs_ids = list(range(len(docs)))
         avg_spans = sum(len(doc["head2span"]) for doc in docs) / len(docs)
 
-        for epoch in range(self.epochs_trained, self.config.train_epochs):
+        for epoch in range(self.epochs_trained, self.model_config.train_epochs):
             self.training = True
             running_c_loss = 0.0
             running_s_loss = 0.0
@@ -330,7 +333,7 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
     # ========================================================= Private methods
 
     def _bertify(self, doc: Doc) -> torch.Tensor:
-        subwords_batches = bert.get_subwords_batches(doc, self.config,
+        subwords_batches = bert.get_subwords_batches(doc, self.model_config,
                                                      self.tokenizer)
 
         special_tokens = np.array([self.tokenizer.cls_token_id,
@@ -339,34 +342,34 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
         subword_mask = ~(np.isin(subwords_batches, special_tokens))
 
         subwords_batches_tensor = torch.tensor(subwords_batches,
-                                               device=self.config.device,
+                                               device=self.model_config.device,
                                                dtype=torch.long)
         subword_mask_tensor = torch.tensor(subword_mask,
-                                           device=self.config.device)
+                                           device=self.model_config.device)
 
         # Obtain bert output for selected batches only
         attention_mask = (subwords_batches != self.tokenizer.pad_token_id)
         out, _ = self.bert(
             subwords_batches_tensor,
             attention_mask=torch.tensor(
-                attention_mask, device=self.config.device))
+                attention_mask, device=self.model_config.device))
         del _
 
         # [n_subwords, bert_emb]
         return out[subword_mask_tensor]
 
     def _build_model(self):
-        self.bert, self.tokenizer = bert.load_bert(self.config)
-        self.pw = PairwiseEncoder(self.config).to(self.config.device)
+        self.bert, self.tokenizer = bert.load_bert(self.model_config)
+        self.pw = PairwiseEncoder(self.model_config).to(self.model_config.device)
 
         bert_emb = self.bert.config.hidden_size
         pair_emb = bert_emb * 3 + self.pw.shape
 
         # pylint: disable=line-too-long
-        self.a_scorer = AnaphoricityScorer(pair_emb, self.config).to(self.config.device)
-        self.we = WordEncoder(bert_emb, self.config).to(self.config.device)
-        self.rough_scorer = RoughScorer(bert_emb, self.config).to(self.config.device)
-        self.sp = SpanPredictor(bert_emb, self.config.sp_embedding_size).to(self.config.device)
+        self.a_scorer = AnaphoricityScorer(pair_emb, self.model_config).to(self.model_config.device)
+        self.we = WordEncoder(bert_emb, self.model_config).to(self.model_config.device)
+        self.rough_scorer = RoughScorer(bert_emb, self.model_config).to(self.model_config.device)
+        self.sp = SpanPredictor(bert_emb, self.model_config.sp_embedding_size).to(self.model_config.device)
 
         self.trainable: Dict[str, torch.nn.Module] = {
             "bert": self.bert, "we": self.we,
@@ -376,21 +379,21 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
         }
 
     def _build_optimizers(self):
-        n_docs = len(self._get_docs(self.config.train_data))
+        n_docs = len(self._get_docs(self.data_config.train_data))
         self.optimizers: Dict[str, torch.optim.Optimizer] = {}
         self.schedulers: Dict[str, torch.optim.lr_scheduler.LambdaLR] = {}
 
         for param in self.bert.parameters():
-            param.requires_grad = self.config.bert_finetune
+            param.requires_grad = self.model_config.bert_finetune
 
-        if self.config.bert_finetune:
+        if self.model_config.bert_finetune:
             self.optimizers["bert_optimizer"] = torch.optim.Adam(
-                self.bert.parameters(), lr=self.config.bert_learning_rate
+                self.bert.parameters(), lr=self.model_config.bert_learning_rate
             )
             self.schedulers["bert_scheduler"] = \
                 transformers.get_linear_schedule_with_warmup(
                     self.optimizers["bert_optimizer"],
-                    n_docs, n_docs * self.config.train_epochs
+                    n_docs, n_docs * self.model_config.train_epochs
                 )
 
         # Must ensure the same ordering of parameters between launches
@@ -403,11 +406,11 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
                 params.append(param)
 
         self.optimizers["general_optimizer"] = torch.optim.Adam(
-            params, lr=self.config.learning_rate)
+            params, lr=self.model_config.learning_rate)
         self.schedulers["general_scheduler"] = \
             transformers.get_linear_schedule_with_warmup(
                 self.optimizers["general_optimizer"],
-                0, n_docs * self.config.train_epochs
+                0, n_docs * self.model_config.train_epochs
             )
 
     def _clusterize(self, doc: Doc, scores: torch.Tensor, top_indices: torch.Tensor):
@@ -438,7 +441,7 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
     def _get_docs(self, path: str) -> List[Doc]:
         if path not in self._docs:
             basename = os.path.basename(path)
-            model_name = self.config.bert_model.replace("/", "_")
+            model_name = self.model_config.bert_model.replace("/", "_")
             cache_filename = f"{model_name}_{basename}.pickle"
             if os.path.exists(cache_filename):
                 with open(cache_filename, mode="rb") as cache_f:
@@ -476,16 +479,28 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
         return y.to(torch.float)
 
     @staticmethod
-    def _load_config(config_path: str,
-                     section: str) -> Config:
-        config = toml.load(config_path)
-        default_section = config["DEFAULT"]
-        current_section = config[section]
+    def _load_configs(data_config_path: str,
+                      model_config_path: str,
+                     section: str) -> (DataConfig, ModelConfig):
+        data_config = toml.load(data_config_path)
+        default_section = data_config["DEFAULT"]
+        #current_section = data_config[section]
+        #unknown_keys = (set(current_section.keys())
+        #                - set(default_section.keys()))
+        #if unknown_keys:
+        #    raise ValueError(f"Unexpected config keys: {unknown_keys}")
+        final_data_config = DataConfig(section, **{**default_section})
+        
+        model_config = toml.load(model_config_path)
+        default_section = model_config["DEFAULT"]
+        current_section = model_config[section]
         unknown_keys = (set(current_section.keys())
                         - set(default_section.keys()))
         if unknown_keys:
             raise ValueError(f"Unexpected config keys: {unknown_keys}")
-        return Config(section, **{**default_section, **current_section})
+        final_model_config = ModelConfig(section, **{**default_section, **current_section})
+
+        return final_data_config, final_model_config
 
     def _set_training(self, value: bool):
         self._training = value
@@ -495,9 +510,9 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
     def _tokenize_docs(self, path: str) -> List[Doc]:
         print(f"Tokenizing documents at {path}...", flush=True)
         out: List[Doc] = []
-        filter_func = TOKENIZER_FILTERS.get(self.config.bert_model,
+        filter_func = TOKENIZER_FILTERS.get(self.model_config.bert_model,
                                             lambda _: True)
-        token_map = TOKENIZER_MAPS.get(self.config.bert_model, {})
+        token_map = TOKENIZER_MAPS.get(self.model_config.bert_model, {})
         with jsonlines.open(path, mode="r") as data_f:
             for doc in data_f:
                 doc["span_clusters"] = [[tuple(mention) for mention in cluster]

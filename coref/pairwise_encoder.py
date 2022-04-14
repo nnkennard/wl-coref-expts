@@ -5,7 +5,7 @@ from typing import List
 
 import torch
 
-from coref.config import Config
+from coref.config import ModelConfig
 from coref.const import Doc
 
 
@@ -16,7 +16,7 @@ class PairwiseEncoder(torch.nn.Module):
         encoder = PairwiseEncoder(config)
         pairwise_features = encoder(pair_indices, doc)
     """
-    def __init__(self, config: Config):
+    def __init__(self, config: ModelConfig):
         super().__init__()
         emb_size = config.embedding_size
 

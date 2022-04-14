@@ -1,0 +1,14 @@
+# =============================================================================
+# Before you start changing anything here, read the comments.
+# All of them can be found below in the "DEFAULT" section
+
+[DEFAULT]
+
+# The directory that contains extracted files of everything you've downloaded.
+data_dir = "data"
+
+# Train, dev and test jsonlines
+train_data = "data/english_train_tiny_head.jsonlines"
+dev_data = "data/english_development_tiny_head.jsonlines"
+test_data = "data/english_test_tiny_head.jsonlines"
+

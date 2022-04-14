@@ -6,7 +6,7 @@ from typing import Tuple
 
 import torch
 
-from coref.config import Config
+from coref.config import ModelConfig
 
 
 class RoughScorer(torch.nn.Module):
@@ -15,7 +15,7 @@ class RoughScorer(torch.nn.Module):
     only top scoring candidates are considered on later steps to reduce
     computational complexity.
     """
-    def __init__(self, features: int, config: Config):
+    def __init__(self, features: int, config: ModelConfig):
         super().__init__()
         self.dropout = torch.nn.Dropout(config.dropout_rate)
         self.bilinear = torch.nn.Linear(features, features)
