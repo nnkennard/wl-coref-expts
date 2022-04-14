@@ -66,8 +66,6 @@ train_epochs = 20
 # Controls the weight of binary cross entropy loss added to nlml loss
 bce_loss_weight = 0.5
 
-# The directory that will contain conll prediction files
-conll_log_dir = "data/conll_logs"
 
 # =============================================================================
 # Extra keyword arguments to be passed to bert tokenizers of specified models

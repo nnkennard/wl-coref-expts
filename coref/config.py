@@ -35,7 +35,6 @@ class ModelConfig:  # pylint: disable=too-many-instance-attributes, too-few-publ
     bce_loss_weight: float
 
     tokenizer_kwargs: Dict[str, dict]
-    conll_log_dir: str
 
 @dataclass
 class DataConfig:  # pylint: disable=too-many-instance-attributes, too-few-public-methods
@@ -48,3 +47,4 @@ class DataConfig:  # pylint: disable=too-many-instance-attributes, too-few-publi
     dev_data: str
     test_data: str
 
+    conll_log_dir: str
