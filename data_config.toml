@@ -5,12 +5,16 @@
 [DEFAULT]
 
 # The directory that contains extracted files of everything you've downloaded.
-data_dir = "processed_datasets/tiny"
+#data_dir = "processed_datasets/tiny"
+data_dir = "checkpoints"
 
 # Train, dev and test jsonlines
 train_data = "processed_datasets/tiny/english_train_tiny_head.jsonlines"
 dev_data = "processed_datasets/tiny/english_train_tiny_head.jsonlines"
 test_data = "processed_datasets/tiny/english_test_tiny_head.jsonlines"
+#train_data = "data/english_train_head.jsonlines"
+#dev_data = "data/english_train_head.jsonlines"
+#test_data = "datasets/english_test_head.jsonlines"
 
 # The directory that will contain conll prediction files
 conll_log_dir = "data/conll_logs"

@@ -8,5 +8,6 @@
 #SBATCH --partition=rtx8000-long
 
 pwd; hostname; date
-python run.py train roberta
+#python run.py train roberta
+python run.py eval roberta
 date
