@@ -6,10 +6,13 @@ from typing import Tuple
 import jsonlines
 
 
-DATA_DIR = "data"
+#DATA_DIR = "data"
+DATA_DIR = "preprocessed_data/litbank/"
 FILENAME = "english_{}{}.jsonlines"
+#FILENAME = "{}.jsonlines"
 LOGGING_LEVEL = logging.WARNING  # DEBUG to output all duplicate spans
-SPLITS = ("development", "test", "train")
+#SPLITS = ("development", "test", "train")
+SPLITS = ["test"]
 
 
 def get_head(mention: Tuple[int, int], doc: dict) -> int:
@@ -39,6 +42,7 @@ if __name__ == "__main__":
     logging.basicConfig(level=LOGGING_LEVEL)
     path = os.path.join(DATA_DIR, FILENAME)
     for split in SPLITS:
+        print(path.format(split, ""))
         with jsonlines.open(path.format(split, ""), mode="r") as inf:
             with jsonlines.open(path.format(split, "_head"), mode="w") as outf:
                 deleted_spans = 0

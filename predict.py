@@ -42,7 +42,8 @@ if __name__ == "__main__":
     argparser.add_argument("experiment")
     argparser.add_argument("input_file")
     argparser.add_argument("output_file")
-    argparser.add_argument("--config-file", default="config.toml")
+    argparser.add_argument("--data-config-file", default="data_config.toml")
+    argparser.add_argument("--model-config-file", default="model_config.toml")
     argparser.add_argument("--batch-size", type=int,
                            help="Adjust to override the config value if you're"
                                 " experiencing out-of-memory issues")
@@ -53,7 +54,7 @@ if __name__ == "__main__":
                                 " if there aren't any, an error is raised.")
     args = argparser.parse_args()
 
-    model = CorefModel(args.config_file, args.experiment)
+    model = CorefModel(args.data_config_file, args.model_config_file, args.experiment)
 
     if args.batch_size:
         model.config.a_scoring_batch_size = args.batch_size
