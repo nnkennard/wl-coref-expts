@@ -6,7 +6,7 @@ device = "cuda:0"
 # Bert settings ======================
 
 # Base bert model architecture and tokenizer
-bert_model = "bert-large-cased"
+bert_model = "bert-base-cased"
 
 # Controls max length of sequences passed through bert to obtain its
 # contextual embeddings
@@ -70,13 +70,13 @@ bce_loss_weight = 0.5
 # =============================================================================
 # Extra keyword arguments to be passed to bert tokenizers of specified models
 [DEFAULT.tokenizer_kwargs]
-    [DEFAULT.tokenizer_kwargs.roberta-large]
+    [DEFAULT.tokenizer_kwargs.roberta-base]
         "add_prefix_space" = true
 
-    [DEFAULT.tokenizer_kwargs.spanbert-large-cased]
+    [DEFAULT.tokenizer_kwargs.spanbert-base-cased]
         "do_lower_case" = false
 
-    [DEFAULT.tokenizer_kwargs.bert-large-cased]
+    [DEFAULT.tokenizer_kwargs.bert-base-cased]
         "do_lower_case" = false
 
 # =============================================================================
@@ -84,24 +84,24 @@ bce_loss_weight = 0.5
 # If a variable is omitted, its default value will be used instead
 
 [roberta]
-bert_model = "roberta-large"
+bert_model = "roberta-base"
 
 [roberta_no_bce]
-bert_model = "roberta-large"
+bert_model = "roberta-base"
 bce_loss_weight = 0.0
 
 [spanbert]
-bert_model = "SpanBERT/spanbert-large-cased"
+bert_model = "SpanBERT/spanbert-base-cased"
 
 [spanbert_no_bce]
-bert_model = "SpanBERT/spanbert-large-cased"
+bert_model = "SpanBERT/spanbert-base-cased"
 bce_loss_weight = 0.0
 
 [bert]
-bert_model = "bert-large-cased"
+bert_model = "bert-base-cased"
 
 [longformer]
-bert_model = "allenai/longformer-large-4096"
+bert_model = "allenai/longformer-base-4096"
 bert_window_size = 2048
 
 [debug]

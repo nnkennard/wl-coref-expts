@@ -27,16 +27,21 @@ from coref.tokenizer_customization import TOKENIZER_FILTERS, TOKENIZER_MAPS
 from coref.utils import GraphNode
 from coref.word_encoder import WordEncoder
 
+def get_relevant_dataset_name(filename, data_config):
+  if 'train' in filename or 'dev' in filename:
+    return data_config.train_dataset
+  else:
+    assert 'test' in filename
+    return data_config.test_dataset
 
-def get_file_name(subset, self.data_config):
+def get_file_name(subset, data_config):
   if subset in ['train', 'dev']:
-    dataset = self.data_config.train_dataset
+    dataset = data_config.train_dataset
   else:
     assert subset == 'test'
-    dataset = self.data_config.test_dataset
-  return f'{self.data_config.data_dir}/{dataset}/english_{subset}_head.jsonlines'
+    dataset = data_config.test_dataset
+  return f'{data_config.data_dir}/{dataset}/english_{subset}_head.jsonlines'
 
-  return 
 
 class CorefModel:  # pylint: disable=too-many-instance-attributes
     """Combines all coref modules together to find coreferent spans.
@@ -179,13 +184,13 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
         """
         Loads pretrained weights of modules saved in a file located at path.
         If path is None, the last saved model with current configuration
-        in data_dir is loaded.
+        in checkpoint_dir is loaded.
         Assumes files are named like {configuration}_(e{epoch}_{time})*.pt.
         """
         if path is None:
             pattern = rf"{self.data_config.section}_preco_\(e(\d+)_[^()]*\).*\.pt"
             files = []
-            for f in os.listdir(self.data_config.data_dir):
+            for f in os.listdir(self.data_config.checkpoint_dir):
                 match_obj = re.match(pattern, f)
                 if match_obj:
                     files.append((int(match_obj.group(1)), f))
@@ -193,9 +198,9 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
                 if noexception:
                     print("No weights have been loaded", flush=True)
                     return
-                raise OSError(f"No weights found in {self.data_config.data_dir}!")
+                raise OSError(f"No weights found in {self.data_config.checkpoint_dir}!")
             _, path = sorted(files)[-1]
-            path = os.path.join(self.data_config.data_dir, path)
+            path = os.path.join(self.data_config.checkpoint_dir, path)
 
         if map_location is None:
             map_location = self.model_config.device
@@ -279,10 +284,10 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
         to_save.extend(self.optimizers.items())
         to_save.extend(self.schedulers.items())
 
-        time = datetime.strftime(datetime.now(), "%Y.%m.%d_%H.%M")
-        path = os.path.join(self.data_config.data_dir,
+        dataset_name = get_relevant_dataset_name("train", self.data_config)
+        path = os.path.join(self.data_config.checkpoint_dir,
                             f"{self.model_config.section}"
-                            f"_preco_(e{self.epochs_trained}_{time}).pt")
+                            f"_{dataset_name}_best.pt")
         savedict = {name: module.state_dict() for name, module in to_save}
         savedict["epochs_trained"] = self.epochs_trained  # type: ignore
         torch.save(savedict, path)
@@ -296,6 +301,8 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
         docs_ids = list(range(len(docs)))
         avg_spans = sum(len(doc["head2span"]) for doc in docs) / len(docs)
 
+        best_dev_loss = float("inf")
+        best_dev_epoch = None
         for epoch in range(self.epochs_trained, self.model_config.train_epochs):
             self.training = True
             running_c_loss = 0.0
@@ -338,8 +345,15 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
                 )
 
             self.epochs_trained += 1
-            self.save_weights()
-            self.evaluate()
+            dev_loss = self.evaluate()[0]
+            if dev_loss < best_dev_loss:
+              best_dev_loss = dev_loss
+              best_dev_epoch = epoch
+              self.save_weights()
+
+            if epoch - best_dev_epoch >= 3:
+              print("Early stopping")
+              break
 
     # ========================================================= Private methods
 
@@ -390,7 +404,7 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
         }
 
     def _build_optimizers(self):
-        n_docs = len(self._get_docs(self.data_config.train_data))
+        n_docs = len(self._get_docs(get_file_name("train", self.data_config)))
         self.optimizers: Dict[str, torch.optim.Optimizer] = {}
         self.schedulers: Dict[str, torch.optim.lr_scheduler.LambdaLR] = {}
 
@@ -451,16 +465,17 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
 
     def _get_docs(self, path: str) -> List[Doc]:
         if path not in self._docs:
+            dataset_name = get_relevant_dataset_name(path, self.data_config)
             basename = os.path.basename(path)
             model_name = self.model_config.bert_model.replace("/", "_")
-            cache_filename = f"caches/{model_name}_{basename}.pickle"
+            cache_filename = f"caches/{model_name}_{dataset_name}_{basename}.pickle"
             os.makedirs("caches/", exist_ok=True)
             if os.path.exists(cache_filename):
-                print(f"Loading tokenized {model_name} {basename} from cache")
+                print(f"Loading tokenized {model_name} {dataset_name} {basename} from cache")
                 with open(cache_filename, mode="rb") as cache_f:
                     self._docs[path] = pickle.load(cache_f)
             else:
-                print(f"Tokenizing {model_name} {basename}, saving to cache")
+                print(f"Tokenizing {model_name} {dataset_name} {basename}, saving to cache")
                 self._docs[path] = self._tokenize_docs(path)
                 with open(cache_filename, mode="wb") as cache_f:
                     pickle.dump(self._docs[path], cache_f)

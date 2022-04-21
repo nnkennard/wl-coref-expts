@@ -42,8 +42,8 @@ if __name__ == "__main__":
     argparser = argparse.ArgumentParser()
     argparser.add_argument("mode", choices=("train", "eval"))
     argparser.add_argument("experiment")
-    argparser.add_argument("--data-config-file", default="data_config.toml")
-    argparser.add_argument("--model-config-file", default="model_config.toml")
+    argparser.add_argument("--data-config-file", default="configs/data_config.toml")
+    argparser.add_argument("--model-config-file", default="configs/model_config.toml")
     argparser.add_argument("--data-split", choices=("train", "dev", "test"),
                            default="test",
                            help="Data split to be used for evaluation."

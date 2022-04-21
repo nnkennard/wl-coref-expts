@@ -41,6 +41,7 @@ class DataConfig:  # pylint: disable=too-many-instance-attributes, too-few-publi
     """ Contains values needed to set up the coreference model. """
     section: str
 
+    checkpoint_dir: str
     data_dir: str
 
     train_dataset: str
