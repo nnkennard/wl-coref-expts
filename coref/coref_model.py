@@ -442,11 +442,14 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
         if path not in self._docs:
             basename = os.path.basename(path)
             model_name = self.model_config.bert_model.replace("/", "_")
-            cache_filename = f"{model_name}_{basename}.pickle"
+            cache_filename = f"caches/{model_name}_{basename}.pickle"
+            os.makedirs("caches/", exist_ok=True)
             if os.path.exists(cache_filename):
+                print(f"Loading tokenized {model_name} {basename} from cache")
                 with open(cache_filename, mode="rb") as cache_f:
                     self._docs[path] = pickle.load(cache_f)
             else:
+                print(f"Tokenizing {model_name} {basename}, saving to cache")
                 self._docs[path] = self._tokenize_docs(path)
                 with open(cache_filename, mode="wb") as cache_f:
                     pickle.dump(self._docs[path], cache_f)

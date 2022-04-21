@@ -1,3 +1,5 @@
+import argparse
+import glob
 from collections import defaultdict
 import logging
 import os
@@ -5,14 +7,12 @@ from typing import Tuple
 
 import jsonlines
 
-
-#DATA_DIR = "data"
-DATA_DIR = "preprocessed_data/preco/"
-FILENAME = "english_{}{}.jsonlines"
-#FILENAME = "{}.jsonlines"
 LOGGING_LEVEL = logging.WARNING  # DEBUG to output all duplicate spans
-SPLITS = ("dev", "test", "train")
 
+parser = argparse.ArgumentParser(
+    description='Add dependency heads to jsonlines files')
+parser.add_argument('-d', '--data_dir',
+        type=str, help='directory of files to convert')
 
 def get_head(mention: Tuple[int, int], doc: dict) -> int:
     """Returns the span's head, which is defined as the only word within the
@@ -38,12 +38,13 @@ def get_head(mention: Tuple[int, int], doc: dict) -> int:
 
 
 if __name__ == "__main__":
+    args = parser.parse_args()
     logging.basicConfig(level=LOGGING_LEVEL)
-    path = os.path.join(DATA_DIR, FILENAME)
-    for split in SPLITS:
-        print(path.format(split, ""))
-        with jsonlines.open(path.format(split, ""), mode="r") as inf:
-            with jsonlines.open(path.format(split, "_head"), mode="w") as outf:
+    for path in glob.glob(f'{args.data_dir}/*.jsonlines'):
+        if 'head' in path:
+          continue
+        with jsonlines.open(path, mode="r") as inf:
+            with jsonlines.open(path.replace('.jsonlines', "_head.jsonlines"), mode="w") as outf:
                 deleted_spans = 0
                 deleted_clusters = 0
                 total_spans = 0
@@ -72,7 +73,7 @@ if __name__ == "__main__":
                         doc["head2span"].append((head, *spans[0][0]))
 
                         if len(spans) > 1:
-                            logging.debug(f'{split} {doc["document_id"]} {doc["cased_words"][head]}')
+                            logging.debug(f'{path} {doc["document_id"]} {doc["cased_words"][head]}')
                             for span, cluster in spans:
                                 logging.debug(f'{id(cluster)} {" ".join(doc["cased_words"][slice(*span)])}')
                             logging.debug("=====")
@@ -89,7 +90,7 @@ if __name__ == "__main__":
 
                     outf.write(doc)
 
-                print(f"Deleted in {split}:"
+                print(f"Deleted in {path}:"
                       f"\n\t{deleted_spans}/{total_spans} ({deleted_spans/total_spans:.2%}) spans"
                       f"\n\t{deleted_clusters}/{total_clusters} ({deleted_clusters/total_clusters:.2%}) clusters"
                       f"\n")
