@@ -7,12 +7,11 @@ import jsonlines
 
 
 #DATA_DIR = "data"
-DATA_DIR = "preprocessed_data/litbank/"
+DATA_DIR = "preprocessed_data/preco/"
 FILENAME = "english_{}{}.jsonlines"
 #FILENAME = "{}.jsonlines"
 LOGGING_LEVEL = logging.WARNING  # DEBUG to output all duplicate spans
-#SPLITS = ("development", "test", "train")
-SPLITS = ["test"]
+SPLITS = ("dev", "test", "train")
 
 
 def get_head(mention: Tuple[int, int], doc: dict) -> int:

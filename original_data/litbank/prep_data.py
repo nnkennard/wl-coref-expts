@@ -1,15 +1,11 @@
 import collections
 import glob
 import json
-import stanza
 import tqdm
 
-STANZA_PIPELINE = stanza.Pipeline(lang="en",
-                                  processors="tokenize,pos,lemma,depparse",
-                                  tokenize_pretokenized=True)
+import prep_lib
 
 COREF_DATA_GLOB = "litbank/coref/conll/*"
-SPEAKER_PLACEHOLDER = "Speaker0"
 
 
 def coref_to_spans(coref_col, offset):
@@ -43,12 +39,6 @@ def clean_token_line(line):
   fields = line.strip().split("\t")
   return fields[3], fields[-1]
 
-
-def get_token_syntax(token, sentence_offset):
-  (token_dict,) = token.to_dict()
-  head = token_dict["head"] - 1
-  head = None if head < 0 else sentence_offset + head
-  return token_dict["xpos"], head, token_dict["deprel"]
 
 
 def build_document(filename):
@@ -93,11 +83,7 @@ def build_document(filename):
     data["sent_id"] += [sentence_index for _ in tokens]
     data["speaker"] += [SPEAKER_PLACEHOLDER for _ in tokens]
 
-    annotated = STANZA_PIPELINE(" ".join(tokens))
-    (sentence,) = annotated.sentences
-    pos, head, deprel = zip(
-        *
-        [get_token_syntax(token, sentence_offset) for token in sentence.tokens])
+    pos, head, deprel = prep_lib.get_sentence_syntax(tokens, sentence_offset)
     data["pos"] += pos
     data["head"] += head
     data["deprel"] += deprel

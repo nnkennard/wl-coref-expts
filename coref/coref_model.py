@@ -173,7 +173,7 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
         Assumes files are named like {configuration}_(e{epoch}_{time})*.pt.
         """
         if path is None:
-            pattern = rf"{self.data_config.section}_\(e(\d+)_[^()]*\).*\.pt"
+            pattern = rf"{self.data_config.section}_preco_\(e(\d+)_[^()]*\).*\.pt"
             files = []
             for f in os.listdir(self.data_config.data_dir):
                 match_obj = re.match(pattern, f)
@@ -272,7 +272,7 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
         time = datetime.strftime(datetime.now(), "%Y.%m.%d_%H.%M")
         path = os.path.join(self.data_config.data_dir,
                             f"{self.model_config.section}"
-                            f"_(e{self.epochs_trained}_{time}).pt")
+                            f"_preco_(e{self.epochs_trained}_{time}).pt")
         savedict = {name: module.state_dict() for name, module in to_save}
         savedict["epochs_trained"] = self.epochs_trained  # type: ignore
         torch.save(savedict, path)
