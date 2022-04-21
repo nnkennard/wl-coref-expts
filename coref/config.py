@@ -43,8 +43,7 @@ class DataConfig:  # pylint: disable=too-many-instance-attributes, too-few-publi
 
     data_dir: str
 
-    train_data: str
-    dev_data: str
-    test_data: str
+    train_dataset: str
+    test_dataset: str
 
     conll_log_dir: str

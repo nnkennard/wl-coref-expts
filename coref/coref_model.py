@@ -28,6 +28,16 @@ from coref.utils import GraphNode
 from coref.word_encoder import WordEncoder
 
 
+def get_file_name(subset, self.data_config):
+  if subset in ['train', 'dev']:
+    dataset = self.data_config.train_dataset
+  else:
+    assert subset == 'test'
+    dataset = self.data_config.test_dataset
+  return f'{self.data_config.data_dir}/{dataset}/english_{subset}_head.jsonlines'
+
+  return 
+
 class CorefModel:  # pylint: disable=too-many-instance-attributes
     """Combines all coref modules together to find coreferent spans.
 
@@ -104,7 +114,7 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
         self.training = False
         w_checker = ClusterChecker()
         s_checker = ClusterChecker()
-        docs = self._get_docs(self.data_config.__dict__[f"{data_split}_data"])
+        docs = self._get_docs(get_file_name(data_split, self.data_config))
         running_loss = 0.0
         s_correct = 0
         s_total = 0
@@ -281,7 +291,8 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
         """
         Trains all the trainable blocks in the model using the config provided.
         """
-        docs = list(self._get_docs(self.data_config.train_data))
+        train_file = get_file_name('train', self.data_config)
+        docs = list(self._get_docs(train_file))
         docs_ids = list(range(len(docs)))
         avg_spans = sum(len(doc["head2span"]) for doc in docs) / len(docs)
 

@@ -9,9 +9,8 @@
 data_dir = "checkpoints"
 
 # Train, dev and test jsonlines
-train_data = "preprocessed_data/preco/english_train_head.jsonl"
-dev_data = "preprocessed_data/preco/english_dev_head.jsonl"
-test_data = "preprocessed_data/preco/english_test_head.jsonl"
+train_dataset = "preco"
+test_dataset = "preco"
 
 # The directory that will contain conll prediction files
 conll_log_dir = "data/conll_logs"
